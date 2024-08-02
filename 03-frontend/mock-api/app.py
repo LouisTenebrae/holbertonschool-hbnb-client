@@ -26,7 +26,7 @@ def login():
     password = request.json.get('password')
 
     user = next((u for u in users if u['email'] == email and u['password'] == password), None)
-    
+
     if not user:
         print(f"User not found or invalid password for: {email}")
         return jsonify({"msg": "Invalid credentials"}), 401

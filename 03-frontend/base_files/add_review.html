@@ -5,20 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Review</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #ff0000;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #ff00005d;
+        }
+        .place-details {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: 20px;
+        }
+        .place-image-large {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+        }
+        .place-info {
+            margin: 15px 0;
+        }
+        .form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <img src="images/logo.png" alt="logo">
+        <nav>
+            <a href="index.html" class="button">Home</a>
+            <a href="login.html" class="button">Login</a>
+        </nav>
+    </header>
     <main>
-        <form id="review-form">
-            <h2>Add a Review</h2>
-            <label for="place">Place:</label>
-            <input type="text" id="place" name="place" readonly>
-            
-            <label for="review">Review:</label>
-            <textarea id="review" name="review" required></textarea>
-            
-            <button type="submit">Submit</button>
-        </form>
+        <section id="place-details" class="place-details place-card">
+            <!-- Place details will be populated dynamically -->
+        </section>
+        <section id="add-review" class="add-review">
+            <!-- Add review form will be inserted dynamically -->
+        </section>
     </main>
-    <script src="scripts.js"></script>
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function checkAuthentication() {
+            const token = getCookie('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return null;
+            }
+            return token;
+        }
+
+        function getPlaceIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('place');
+        }
+
+        async function submitReview(token, placeId, reviewText, reviewRating) {
+            try {
+                const response = await fetch('https://your-api-url/add-review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        placeId: placeId,
+                        review: {
+                            text: reviewText,
+                            rating: reviewRating
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Review submitted successfully!');
+                    document.getElementById('review-form').reset();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                alert('An error occurred while submitting your review.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = checkAuthentication();
+            if (!token) return;
+
+            const placeId = getPlaceIdFromURL();
+            if (!placeId) {
+                console.error('Place ID not found in URL');
+                return;
+            }
+
+            const addReviewSection = document.getElementById('add-review');
+            addReviewSection.innerHTML = `
+                <h2>Add a Review</h2>
+                <form id="review-form" class="form">
+                    <label for="review-text">Review:</label>
+                    <textarea id="review-text" name="review-text" required></textarea>
+                    <label for="review-rating">Rating:</label>
+                    <select id="review-rating" name="review-rating" required>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                    <button type="submit">Submit</button>
+                </form>
+            `;
+
+            document.getElementById('review-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+                const reviewText = document.getElementById('review-text').value;
+                const reviewRating = document.getElementById('review-rating').value;
+                submitReview(token, placeId, reviewText, reviewRating);
+            });
+        });
+
+        async function fetchPlaceDetails() {
+            try {
+                const placeId = getPlaceIdFromURL();
+                const response = await fetch(`https://your-api-url/places/${placeId}`);
+                const place = await response.json();
+
+                if (!place) {
+                    console.error('Place not found');
+                    return;
+                }
+
+                const placeDetailsSection = document.getElementById('place-details');
+                placeDetailsSection.innerHTML = `
+                    <img src="${place.image}" alt="${place.name}" class="place-image-large">
+                    <h1>${place.name}</h1>
+                    <p class="place-info">Host: ${place.host_name}</p>
+                    <p class="place-info">Location: ${place.location}</p>
+                    <p class="place-info">Price per night: ${place.price}</p>
+                    <p class="place-info">Description: ${place.description}</p>
+                    <p class="place-info">Amenities: ${place.amenities.join(', ')}</p>
+                `;
+            } catch (error) {
+                console.error('Error fetching place details:', error);
+            }
+        }
+
+        window.onload = fetchPlaceDetails;
+    </script>
+    <footer>
+        <p> All rights reserved. &copy; 2024</p>
+    </footer>
 </body>
 </html>

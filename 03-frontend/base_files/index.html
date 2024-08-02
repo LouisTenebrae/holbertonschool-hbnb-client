@@ -5,17 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>List of Places</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #ff0000;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    
+        .button:hover {
+            background-color: #ff00005d;
+        }
+        .place-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .place-image {
+            width: 100%;
+            height: auto;
+        }
+        .place-details {
+            margin-top: 10px;
+        }
+        .details-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: #f80606;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .details-button:hover {
+            background-color: #ff00005d;
+        }
+    </style>
 </head>
 <body>
     <header>
         <nav>
-            <a href="login.html" id="login-link">Login</a>
+            <img src="images/logo.png" alt="logo">
+        </nav>
+        <nav>
+            <a href="login.html" id="login-link" class="button">Login</a>
         </nav>
     </header>
     <main>
         <section id="filter">
             <label for="country-filter">Filter by Country:</label>
             <select id="country-filter">
+                <option value="">All Countries</option>
                 <!-- Options will be populated dynamically -->
             </select>
         </section>
@@ -23,6 +75,109 @@
             <!-- List of places will be populated dynamically -->
         </section>
     </main>
-    <script src="scripts.js"></script>
+    <footer>
+        <p> All rights reserved. &copy; 2024</p>
+    </footer>
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function checkUserAuthentication() {
+            const token = getCookie('token');
+            const loginLink = document.getElementById('login-link');
+            if (token) {
+                loginLink.style.display = 'none';
+            } else {
+                loginLink.style.display = 'block';
+            }
+        }
+
+        async function fetchAndDisplayPlaces() {
+            try {
+                // Fetch the JSON data containing places
+                const response = await fetch('data/places.json');
+                const places = await response.json();
+
+                // Fetch the JSON data containing countries
+                const countryResponse = await fetch('data/countries.json');
+                const countries = await countryResponse.json();
+
+                // Populate the country filter dropdown
+                const countryFilter = document.getElementById('country-filter');
+                countries.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.code;
+                    option.textContent = country.name;
+                    countryFilter.appendChild(option);
+                });
+
+                // Display all places initially
+                displayPlaces(places);
+
+                // Add event listener to filter places by selected country code
+                countryFilter.addEventListener('change', () => {
+                    const selectedCountryCode = countryFilter.value;
+                    if (selectedCountryCode === "") {
+                        displayPlaces(places); // Show all places if "All Countries" is selected
+                    } else {
+                        const filteredPlaces = places.filter(place => place.countryCode === selectedCountryCode);
+                        displayPlaces(filteredPlaces);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function displayPlaces(places) {
+            const placesContainer = document.getElementById('places-list');
+            placesContainer.innerHTML = ''; // Clear previous content
+
+            places.forEach(place => {
+                const placeCard = document.createElement('div');
+                placeCard.className = 'place-card';
+
+                const placeImage = document.createElement('img');
+                placeImage.className = 'place-image';
+                placeImage.src = place.image; // Ensure the image URL is provided in the places JSON
+                placeImage.alt = place.name;
+
+                const placeName = document.createElement('h3');
+                placeName.textContent = place.name;
+
+                const placeLocation = document.createElement('p');
+                placeLocation.textContent = `Location: ${place.name}, ${place.countryCode}`;
+
+                const placePrice = document.createElement('p');
+                placePrice.textContent = `Price per night: ${place.price}`;
+
+                const detailsButton = document.createElement('button');
+                detailsButton.className = 'details-button';
+                detailsButton.textContent = 'View Details';
+                detailsButton.addEventListener('click', () => {
+                    // Redirect to place.html with the place name as a query parameter
+                    window.location.href = `place.html?place=${encodeURIComponent(place.name)}`;
+                });
+
+                placeCard.appendChild(placeImage);
+                placeCard.appendChild(placeName);
+                placeCard.appendChild(placeLocation);
+                placeCard.appendChild(placePrice);
+                placeCard.appendChild(detailsButton);
+
+                placesContainer.appendChild(placeCard);
+            });
+        }
+
+        // Load data and display places on page load
+        window.onload = () => {
+            checkUserAuthentication();
+            fetchAndDisplayPlaces();
+        };
+    </script>
 </body>
 </html>
